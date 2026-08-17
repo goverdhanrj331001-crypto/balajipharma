@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,19 +41,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Local signup fallback to avoid hook signature mismatch.
-  const signup = async (email: string, password: string, name: string) => {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? 'Signup failed');
-    document.cookie = `medidemo-session=${encodeURIComponent(data.token)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-    return data.user;
   };
 
   return (

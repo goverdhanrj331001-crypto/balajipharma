@@ -32,6 +32,18 @@ const opMap: Record<string, '<' | '<=' | '==' | '!=' | '>=' | '>' | 'in' | 'not-
   in: 'in',
 };
 
+// Firestore rejects `undefined` values. Recursively strip them.
+function stripUndefined(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(stripUndefined);
+  const out: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    out[k] = stripUndefined(v);
+  }
+  return out;
+}
+
 export const firestoreRepo = {
   async list(col: string, opts?: QueryOpts) {
     const fs = await getAdminFirestore();
@@ -59,7 +71,7 @@ export const firestoreRepo = {
   async create(col: string, data: any) {
     const fs = await getAdminFirestore();
     if (!fs) throw new Error('Firestore not configured');
-    const payload = { ...data, createdAt: Date.now(), updatedAt: Date.now() };
+    const payload = stripUndefined({ ...data, createdAt: Date.now(), updatedAt: Date.now() });
     if (data.id) {
       await (fs as any).collection(colNames[col] ?? col).doc(String(data.id)).set(payload);
       return { ...payload, id: data.id };
@@ -70,7 +82,8 @@ export const firestoreRepo = {
   async update(col: string, id: string, patch: any) {
     const fs = await getAdminFirestore();
     if (!fs) throw new Error('Firestore not configured');
-    await (fs as any).collection(colNames[col] ?? col).doc(id).update({ ...patch, updatedAt: Date.now() });
+    const cleanPatch = stripUndefined({ ...patch, updatedAt: Date.now() });
+    await (fs as any).collection(colNames[col] ?? col).doc(id).update(cleanPatch);
     return this.get(col, id);
   },
   async delete(col: string, id: string) {

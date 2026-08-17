@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@/components/ui/icon';
 import { useAuth } from '@/lib/auth/auth-context';
-import { PrimaryButton } from '@/components/admin/ui/form';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -94,9 +93,19 @@ export default function AdminLoginPage() {
             {error && (
               <p className="rounded-lg bg-[#fff4f2] p-3 text-[12px] font-semibold text-[#910816]">{error}</p>
             )}
-            <PrimaryButton type="submit" loading={loading} className="w-full">
-              Sign In <Icon name="arrow_forward" className="text-[17px]" />
-            </PrimaryButton>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#006872] py-3 text-[12px] font-bold text-white shadow-sm hover:bg-[#00535b] disabled:opacity-60"
+            >
+              {loading ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <>
+                  Sign In <Icon name="arrow_forward" className="text-[17px]" />
+                </>
+              )}
+            </button>
           </form>
 
           <Link

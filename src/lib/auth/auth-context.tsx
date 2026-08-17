@@ -25,6 +25,37 @@ function clearCookie(name: string) {
   document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
 }
 
+// ─── Server-side auth (works for both mock and Firebase modes) ───
+// The server mints a Firebase custom token (Firebase mode) or a
+// base64 mock token (mock mode) and we store it as a cookie.
+// The server's /api/auth/me endpoint verifies this token on each request.
+
+async function serverLogin(email: string, password: string): Promise<{ token: string; user: SessionUser }> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Login failed');
+  return { token: data.token, user: data.user as SessionUser };
+}
+
+async function serverSignup(
+  email: string,
+  password: string,
+  name: string,
+): Promise<{ token: string; user: SessionUser }> {
+  const res = await fetch('/api/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Signup failed');
+  return { token: data.token, user: data.user as SessionUser };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,29 +81,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    setCookie(COOKIE_NAME, data.token, ONE_WEEK);
-    setUser(data.user);
-    return data.user as SessionUser;
+    const { token, user } = await serverLogin(email, password);
+    setCookie(COOKIE_NAME, token, ONE_WEEK);
+    setUser(user);
+    return user;
   }, []);
 
   const signup = useCallback(async (email: string, password: string, name: string) => {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Signup failed');
-    setCookie(COOKIE_NAME, data.token, ONE_WEEK);
-    setUser(data.user);
-    return data.user as SessionUser;
+    const { token, user } = await serverSignup(email, password, name);
+    setCookie(COOKIE_NAME, token, ONE_WEEK);
+    setUser(user);
+    return user;
   }, []);
 
   const logout = useCallback(async () => {
