@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { StoreHeader } from '@/components/layout/store-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
@@ -8,12 +8,14 @@ import { ProductCard } from '@/components/store/product-card';
 import { Icon } from '@/components/ui/icon';
 import type { Product, Category } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 interface Catalog {
   products: Product[];
   categories: Category[];
 }
 
-export default function ProductsPage() {
+function ProductsContent() {
   const params = useSearchParams();
   const [data, setData] = useState<Catalog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,12 +31,10 @@ export default function ProductsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Sync URL → state (only when params actually change)
   useEffect(() => {
     const q = params.get('q');
     const cat = params.get('category');
     if (q !== null && q !== search) {
-      // Defer to avoid synchronous setState in effect
       Promise.resolve().then(() => setSearch(q));
     }
     if (cat !== null && cat !== selectedCat) {
@@ -83,7 +83,6 @@ export default function ProductsPage() {
           </select>
         </div>
 
-        {/* Search & filter bar */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <input
@@ -106,7 +105,6 @@ export default function ProductsPage() {
           </select>
         </div>
 
-        {/* Products grid */}
         {loading ? (
           <div className="flex h-96 items-center justify-center">
             <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#006872]/30 border-t-[#006872]" />
@@ -127,5 +125,23 @@ export default function ProductsPage() {
       </main>
       <BottomNav />
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="app-root min-h-screen pb-16">
+        <StoreHeader search={false} />
+        <main className="desktop-canvas px-4 py-4 md:px-8">
+          <div className="flex h-96 items-center justify-center">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#006872]/30 border-t-[#006872]" />
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }
