@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { StoreHeader } from '@/components/layout/store-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
@@ -9,7 +9,9 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { toast } from 'sonner';
 import type { LabPackage, LabTest } from '@/types';
 
-export default function ScheduleLabTestPage() {
+export const dynamic = 'force-dynamic';
+
+function ScheduleLabTestContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { user } = useAuth();
@@ -211,5 +213,23 @@ export default function ScheduleLabTestPage() {
       </main>
       <BottomNav />
     </div>
+  );
+}
+
+export default function ScheduleLabTestPage() {
+  return (
+    <Suspense fallback={
+      <div className="app-root min-h-screen pb-16">
+        <StoreHeader search={false} />
+        <main className="desktop-canvas px-4 py-4 md:px-8">
+          <div className="flex h-64 items-center justify-center">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#006872]/30 border-t-[#006872]" />
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    }>
+      <ScheduleLabTestContent />
+    </Suspense>
   );
 }
