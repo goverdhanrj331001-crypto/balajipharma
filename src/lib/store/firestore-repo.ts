@@ -1,6 +1,10 @@
 // ─── Firestore repository ────────────────────────────────────────
-// Used when real Firebase credentials are configured.
+// Used when real Firebase Admin SDK credentials are configured.
 // Mirrors the in-memory store's API.
+//
+// firebase-admin v14 uses @google-cloud/firestore under the hood, where
+// methods like collection(), doc(), query() live on the Firestore instance
+// itself — not as top-level exports.
 
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import type { QueryOpts } from './repo';
@@ -22,51 +26,57 @@ const colNames: Record<string, string> = {
   settings: 'settings',
 };
 
+const opMap: Record<string, '<' | '<=' | '==' | '!=' | '>=' | '>' | 'in' | 'not-in' | 'array-contains' | 'array-contains-any'> = {
+  '==': '==',
+  '!=': '!=',
+  in: 'in',
+};
+
 export const firestoreRepo = {
   async list(col: string, opts?: QueryOpts) {
     const fs = await getAdminFirestore();
     if (!fs) return [];
-    const { collection, getDocs, query, where, orderBy, limit } = await import('firebase-admin/firestore');
-    const constraints: any[] = [];
+    const colRef = (fs as any).collection(colNames[col] ?? col);
+    let q: any = colRef;
     if (opts?.where) {
-      for (const c of opts.where) constraints.push(where(c.field, c.op, c.value));
+      for (const c of opts.where) {
+        const op = opMap[c.op];
+        if (!op) continue;
+        q = q.where(c.field, op, c.value);
+      }
     }
-    if (opts?.orderBy) constraints.push(orderBy(opts.orderBy, opts.orderDir ?? 'asc'));
-    if (opts?.limit) constraints.push(limit(opts.limit));
-    const snap = await getDocs(query(collection(fs as any, colNames[col] ?? col), ...constraints));
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (opts?.orderBy) q = q.orderBy(opts.orderBy, opts.orderDir ?? 'asc');
+    if (opts?.limit) q = q.limit(opts.limit);
+    const snap = await q.get();
+    return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
   },
   async get(col: string, id: string) {
     const fs = await getAdminFirestore();
     if (!fs) return null;
-    const { doc, getDoc } = await import('firebase-admin/firestore');
-    const snap = await getDoc(doc(fs as any, colNames[col] ?? col, id));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    const snap = await (fs as any).collection(colNames[col] ?? col).doc(id).get();
+    return snap.exists ? { id: snap.id, ...snap.data() } : null;
   },
   async create(col: string, data: any) {
     const fs = await getAdminFirestore();
     if (!fs) throw new Error('Firestore not configured');
-    const { collection, addDoc, doc, setDoc } = await import('firebase-admin/firestore');
     const payload = { ...data, createdAt: Date.now(), updatedAt: Date.now() };
     if (data.id) {
-      await setDoc(doc(fs as any, colNames[col] ?? col, String(data.id)), payload);
+      await (fs as any).collection(colNames[col] ?? col).doc(String(data.id)).set(payload);
       return { ...payload, id: data.id };
     }
-    const ref = await addDoc(collection(fs as any, colNames[col] ?? col), payload);
+    const ref = await (fs as any).collection(colNames[col] ?? col).add(payload);
     return { ...payload, id: ref.id };
   },
   async update(col: string, id: string, patch: any) {
     const fs = await getAdminFirestore();
     if (!fs) throw new Error('Firestore not configured');
-    const { doc, updateDoc } = await import('firebase-admin/firestore');
-    await updateDoc(doc(fs as any, colNames[col] ?? col, id), { ...patch, updatedAt: Date.now() });
+    await (fs as any).collection(colNames[col] ?? col).doc(id).update({ ...patch, updatedAt: Date.now() });
     return this.get(col, id);
   },
   async delete(col: string, id: string) {
     const fs = await getAdminFirestore();
     if (!fs) throw new Error('Firestore not configured');
-    const { doc, deleteDoc } = await import('firebase-admin/firestore');
-    await deleteDoc(doc(fs as any, colNames[col] ?? col, id));
+    await (fs as any).collection(colNames[col] ?? col).doc(id).delete();
     return true;
   },
   async count(col: string) {
