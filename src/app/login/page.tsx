@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { StoreHeader } from '@/components/layout/store-header';
@@ -9,7 +9,9 @@ import { Icon } from '@/components/ui/icon';
 import { useAuth } from '@/lib/auth/auth-context';
 import { toast } from 'sonner';
 
-export default function LoginPage() {
+export const dynamic = 'force-dynamic';
+
+function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { login, signup } = useAuth();
@@ -49,7 +51,6 @@ export default function LoginPage() {
       <main className="desktop-canvas px-4 py-6 md:px-8">
         <div className="mx-auto max-w-md">
           <div className="soft-card rounded-2xl p-6">
-            {/* Toggle */}
             <div className="mb-6 flex rounded-lg bg-[#f0eded] p-1">
               <button
                 type="button"
@@ -137,7 +138,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Demo credentials hint */}
             <div className="mt-5 rounded-lg bg-[#f5f3f3] p-3 text-[11px] text-[#6e797b]">
               <p className="font-bold text-[#3e494a]">Demo customer account:</p>
               <p className="mt-1">Email: <code className="rounded bg-white px-1">user@medidemo.com</code></p>
@@ -155,5 +155,27 @@ export default function LoginPage() {
       </main>
       <BottomNav />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="app-root min-h-screen pb-16">
+        <StoreHeader search={false} />
+        <main className="desktop-canvas px-4 py-6 md:px-8">
+          <div className="mx-auto max-w-md">
+            <div className="soft-card rounded-2xl p-6">
+              <div className="flex h-96 items-center justify-center">
+                <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#006872]/30 border-t-[#006872]" />
+              </div>
+            </div>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
