@@ -1,12 +1,16 @@
 // ─── Unified Data Access Layer ───────────────────────────────────
 // Provides a single CRUD API surface to the rest of the app.
-// - If real Firebase credentials are configured → uses Firestore.
-// - Otherwise → uses the in-memory store (same shape, same methods).
 //
-// All API routes call this layer; they never touch Firebase or the
-// memory store directly.
+// Backend selection priority:
+//   1. Real Firebase Firestore (if Firebase Admin SDK credentials are set)
+//   2. In-memory mock store (default — works out-of-the-box)
+//
+// The client-side NEXT_PUBLIC_FIREBASE_* env vars alone are NOT enough
+// for server-side Firestore access — Admin SDK needs a service-account
+// JSON. Until you provide that, the app uses the mock store so the UI
+// keeps working. Same shapes, same methods, just no persistence.
 
-import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { isAdminSdkConfigured } from '@/lib/firebase/admin';
 import { mem } from '@/lib/store/mem-store';
 import { firestoreRepo } from '@/lib/store/firestore-repo';
 
@@ -34,7 +38,6 @@ export interface QueryOpts {
 }
 
 // ─── In-memory backend ──────────────────────────────────────────
-// Routes collection name → the right MemCollection instance.
 const memBackend = {
   async list(col: string, opts?: QueryOpts) {
     const c = (mem as any)[col];
@@ -69,7 +72,8 @@ const memBackend = {
 };
 
 // Pick the active backend.
-const backend = isFirebaseConfigured ? firestoreRepo : memBackend;
+// Real Firestore only when Admin SDK is fully configured.
+const backend = isAdminSdkConfigured ? firestoreRepo : memBackend;
 
 export const repo = {
   list: (col: Collection, opts?: QueryOpts) => backend.list(col, opts) as Promise<any[]>,
@@ -80,4 +84,5 @@ export const repo = {
   count: (col: Collection) => backend.count(col) as Promise<number>,
 };
 
-export { isFirebaseConfigured };
+export { isFirebaseConfigured } from '@/lib/firebase/config';
+export { isAdminSdkConfigured };

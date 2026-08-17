@@ -1,23 +1,22 @@
 // ─── Session / Auth helpers (server-side) ────────────────────────
 // Verifies the user's ID token (sent from the client) and resolves
 // the matching user record. Falls back to a mock session when
-// Firebase is not configured.
+// Firebase Admin SDK is not configured.
 
 import { cookies } from 'next/headers';
-import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { isAdminSdkConfigured } from '@/lib/firebase/admin';
 import { mem } from '@/lib/store/mem-store';
 import { getAdminAuth } from '@/lib/firebase/admin';
-import { repo } from '@/lib/store/repo';
 import type { SessionUser, UserRole } from '@/types';
 
-// Reads the bearer token from cookies (preferred) or Authorization header.
+// Reads the bearer token from cookies.
 export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get('medidemo-session')?.value;
 
   if (!token) {
-    // Default admin bypass when no auth is configured — only in mock mode.
-    if (!isFirebaseConfigured) {
+    // Default admin bypass only in mock mode.
+    if (!isAdminSdkConfigured) {
       const admin = (await mem.authUsers.list()).find((u: any) => u.role === 'admin');
       if (admin) {
         return {
@@ -32,12 +31,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return null;
   }
 
-  if (isFirebaseConfigured) {
+  if (isAdminSdkConfigured) {
     const adminAuth = await getAdminAuth();
     if (!adminAuth) return null;
     try {
       const decoded = await (adminAuth as any).verifyIdToken(token);
-      // Look up user record.
       const userRecord = await (adminAuth as any).getUser(decoded.uid);
       const role = (userRecord.customClaims?.role ?? 'patient') as UserRole;
       const status = userRecord.customClaims?.status ?? 'active';

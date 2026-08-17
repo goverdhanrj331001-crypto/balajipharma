@@ -14,3 +14,19 @@ export const firebaseApp = app;
 
 export const auth = isFirebaseConfigured ? getAuth(app) : null;
 export const db = isFirebaseConfigured ? getFirestore(app) : null;
+
+// Analytics — lazy-loaded only in browser, only if measurementId is set.
+// Avoids SSR issues and unnecessary bundle on server.
+export let analytics: ReturnType<typeof import('firebase/analytics').getAnalytics> | null = null;
+
+if (isFirebaseConfigured && typeof window !== 'undefined' && firebaseConfig.measurementId) {
+  import('firebase/analytics')
+    .then(({ getAnalytics, isSupported }) =>
+      isSupported().then((ok) => {
+        if (ok) analytics = getAnalytics(app);
+      }),
+    )
+    .catch(() => {
+      // Analytics blocked (e.g. ad blocker) — silently ignore.
+    });
+}

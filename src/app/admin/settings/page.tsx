@@ -7,6 +7,7 @@ import { Field, TextInput, PrimaryButton } from '@/components/admin/ui/form';
 import { Icon } from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { isFirebaseConfigured, isR2Configured } from '@/lib/firebase/config';
+import { isAdminSdkConfiguredClient } from '@/lib/firebase/admin-status';
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<any>(null);
@@ -113,9 +114,10 @@ export default function AdminSettingsPage() {
 
           <div className="space-y-5">
             <SectionCard title="Backend Status">
-              <StatusRow label="Firebase Firestore" status={isFirebaseConfigured ? 'Connected' : 'Mock mode'} good={isFirebaseConfigured} />
-              <StatusRow label="Firebase Auth" status={isFirebaseConfigured ? 'Connected' : 'Mock mode'} good={isFirebaseConfigured} />
-              <StatusRow label="Cloudflare R2" status={isR2Configured ? 'Connected' : 'Local fallback'} good={isR2Configured} />
+              <StatusRow label="Firebase Client Config" status={isFirebaseConfigured ? 'Connected ✓' : 'Missing'} good={isFirebaseConfigured} />
+              <StatusRow label="Firebase Admin SDK" status={isAdminSdkConfiguredClient ? 'Connected ✓' : 'Missing — add service account'} good={isAdminSdkConfiguredClient} />
+              <StatusRow label="Firebase Auth" status={isAdminSdkConfiguredClient ? 'Connected ✓' : 'Mock mode'} good={isAdminSdkConfiguredClient} />
+              <StatusRow label="Cloudflare R2" status={isR2Configured ? 'Connected ✓' : 'Local fallback'} good={isR2Configured} />
             </SectionCard>
 
             <SectionCard title="Configuration Help">

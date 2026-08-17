@@ -2,7 +2,7 @@
 // Handles login, signup, and logout. Uses Firebase Auth when
 // configured, otherwise falls back to a mock in-memory auth.
 
-import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { isAdminSdkConfigured } from '@/lib/firebase/admin';
 import { mem } from '@/lib/store/mem-store';
 import { repo } from '@/lib/store/repo';
 import { randomUUID } from 'crypto';
@@ -16,7 +16,7 @@ export interface LoginResult {
 export async function loginWithEmail(email: string, password: string): Promise<LoginResult> {
   if (!email || !password) throw new Error('Email and password are required');
 
-  if (isFirebaseConfigured) {
+  if (isAdminSdkConfigured) {
     // Real Firebase: client SDK handles this; here we just verify via Admin.
     const { getAdminAuth } = await import('@/lib/firebase/admin');
     const adminAuth = await getAdminAuth();
@@ -53,7 +53,7 @@ export async function signupWithEmail(
   if (!email || !password || !name) throw new Error('All fields are required');
   if (password.length < 6) throw new Error('Password must be at least 6 characters');
 
-  if (isFirebaseConfigured) {
+  if (isAdminSdkConfigured) {
     const { getAdminAuth } = await import('@/lib/firebase/admin');
     const adminAuth = await getAdminAuth();
     if (!adminAuth) throw new Error('Auth not initialized');
